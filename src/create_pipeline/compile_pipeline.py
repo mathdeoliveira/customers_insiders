@@ -5,20 +5,38 @@ local_path = os.path.dirname(os.path.abspath(__file__))
 config_path = os.path.join(local_path, "../../config")
 sys.path.append(config_path)
 
-
-from google_cloud_pipeline_components import aiplatform as gcc_aip
 from kfp.v2 import compiler
-from kfp.v2.dsl import Artifact, Input, Model, Output, component, pipeline
+from google_cloud_pipeline_components import aiplatform as gcc_aip
+from kfp.v2.dsl import component, pipeline, Model, Input, Output, Artifact
 
-from config import (DATASET_ID, DEPLOY_VERSION, FEATURE_TIME, FEATURES,
-                    FEATURESTORE_ID, FRAMEWORK, MODEL_NAME,
-                    MODEL_REGISTRY_NAME, N_CLUSTERS, PIPELINE_NAME,
-                    PIPELINE_ROOT, PROJECT_ID, REGION, SERVING_FEATURE_IDS,
-                    TABLE_FEATURE_ENGINEER_ID, TABLE_FILTERED_TEMP_ID,
-                    TABLE_ID, TABLE_INSTACES_ID, TABLE_PURCHASES_TEMP_ID,
-                    TABLE_RAW_ID, TABLE_RETURNS_TEMP_ID,
-                    TABLE_SAVE_PREDICTIONS_ID, TABLE_TRAIN_ID, TARGET,
-                    VALUES_ENTITY_ID)
+from config import (
+    DATASET_ID,
+    PROJECT_ID,
+    FEATURESTORE_ID,
+    VALUES_ENTITY_ID,
+    SERVING_FEATURE_IDS,
+    TABLE_ID,
+    TABLE_RAW_ID,
+    TABLE_FILTERED_TEMP_ID,
+    TABLE_TRAIN_ID,
+    TABLE_PURCHASES_TEMP_ID,
+    TABLE_RETURNS_TEMP_ID,
+    TABLE_FEATURE_ENGINEER_ID,
+    TABLE_SAVE_PREDICTIONS_ID,
+    TABLE_INSTACES_ID,
+    PIPELINE_NAME,
+    PIPELINE_ROOT,
+    REGION,
+    FEATURE_TIME,
+    FEATURES,
+    TARGET,
+    DEPLOY_VERSION,
+    FRAMEWORK,
+    REGION,
+    MODEL_NAME,
+    MODEL_REGISTRY_NAME,
+    N_CLUSTERS,
+)
 
 
 @component(
@@ -114,8 +132,8 @@ def get_data(project_id: str, dataset_id: str, table_raw_id: str, table_id: str)
 
 @component(
     packages_to_install=["pandas", "google-cloud-bigquery", "db-dtypes", "pandas-gbq"],
-    base_image="python:3.10.6",
-
+    base_image="python:3.10.6"
+)
 def data_preparation(
     project_id: str,
     dataset_id: str,
@@ -124,9 +142,9 @@ def data_preparation(
     table_purchases_temp_id: str,
     table_returns_temp_id: str,
 ):
-
-    import logging
     import os
+    import logging
+    from typing import Tuple
 
     import pandas as pd
     import pandas_gbq
@@ -313,15 +331,15 @@ def feature_engineering(
     table_purchases_temp_id: str,
     table_returns_temp_id: str,
 ):
-    import logging
+    from google.cloud import bigquery
+    from google.cloud.exceptions import NotFound
+    import pandas as pd
+    import pandas_gbq
     import os
+    import logging
     from functools import reduce
     from typing import Union
 
-    import pandas as pd
-    import pandas_gbq
-    from google.cloud import bigquery
-    from google.cloud.exceptions import NotFound
     PROJECT_NUMBER = os.environ["CLOUD_ML_PROJECT_ID"]
 
     logging.info("Iniciando o componente")
@@ -708,6 +726,7 @@ def feature_engineering(
                         `{project_id}.{dataset_id}.{table_id}`);"""
         run_bq_query(query, project_name=project_id)
 
+
 @component(
     packages_to_install=["google-cloud-aiplatform", "pyarrow"],
     base_image="python:3.10.6"
@@ -721,9 +740,8 @@ def create_feature_store(
     feature_time: str,
     region: str,
 ):
-
-    import logging
     import os
+    import logging
 
     from google.cloud import aiplatform
 
@@ -803,6 +821,7 @@ def create_feature_store(
         sync=True,
     )
 
+
 @component(
     packages_to_install=[
         "google-cloud-aiplatform",
@@ -810,6 +829,7 @@ def create_feature_store(
         "db-dtypes",
         "pandas",
     ],
+    base_image="python:3.10.6"
 )
 def create_batch_serve_fs(
     project_id: str,
@@ -821,12 +841,13 @@ def create_batch_serve_fs(
     region: str,
     table_train_id: str,
 ):
-    import logging
     import os
+    import logging
     from typing import Union
 
     import pandas as pd
-    from google.cloud import aiplatform, bigquery
+    from google.cloud import bigquery
+    from google.cloud import aiplatform
 
     TRAIN_TABLE_URI = f"bq://{project_id}.{dataset_id}.{table_train_id}"
     PROJECT_NUMBER = os.environ["CLOUD_ML_PROJECT_ID"]
@@ -893,7 +914,7 @@ def create_batch_serve_fs(
         "google-cloud-bigquery",
         "db-dtypes",
     ],
-    base_image="python:3.10.6",
+    base_image="python:3.10.6"
 )
 def model_train(
     project_id: str,
@@ -908,17 +929,19 @@ def model_train(
     n_clusters: int,
     model: Output[Artifact],
 ):
-    import logging
     import os
-    import pathlib
     import pickle
+    import pathlib
+    import logging
     from typing import Union
 
     import pandas as pd
-    from google.cloud import aiplatform, bigquery
+
+    from google.cloud import bigquery
     from sklearn.cluster import KMeans
-    from sklearn.decomposition import PCA
+    from google.cloud import aiplatform
     from sklearn.pipeline import Pipeline
+    from sklearn.decomposition import PCA
     from sklearn.preprocessing import MinMaxScaler
 
     logging.info("Iniciando o componente")
@@ -990,6 +1013,7 @@ def model_train(
     with open(file_name, "wb") as file:
         pickle.dump(model_pipeline, file)
 
+
 @component(
     packages_to_install=[
         "google-cloud-aiplatform",
@@ -1011,12 +1035,12 @@ def batch_prediction(
     table_train_id: str,
     model: Input[Model],
 ):
-    import logging
     import os
     import pickle
+    import logging
 
-    import pandas as pd
     import pandas_gbq
+    import pandas as pd
     from google.cloud import aiplatform
 
     SQL_TO_PREDICT_DATA = f"""SELECT * 
@@ -1050,6 +1074,7 @@ def batch_prediction(
         project_id=PROJECT_NUMBER,
         if_exists="replace",
     )
+
 
 @pipeline(pipeline_root=PIPELINE_ROOT, name=PIPELINE_NAME.replace("_", "-"))
 def ecommerce_pipeline():
@@ -1130,6 +1155,7 @@ def ecommerce_pipeline():
         table_train_id=TABLE_TRAIN_ID,
         model=model_train_op.outputs["model"],
     )
+
 
 if __name__ == "__main__":
     compiler.Compiler().compile(
