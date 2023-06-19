@@ -38,6 +38,7 @@ from config import (
     N_CLUSTERS,
 )
 
+
 @component(
     packages_to_install=["google-cloud-bigquery", "db-dtypes", "pandas"],
     base_image="python:3.10.6",
@@ -127,6 +128,7 @@ def get_data(project_id: str, dataset_id: str, table_raw_id: str, table_id: str)
 
     run_bq_query(query, project_name=project_id)
     logging.info(f"Tabela criada: {project_id}.{dataset_id}.{table_id}")
+
 
 @component(
     packages_to_install=["pandas", "google-cloud-bigquery", "db-dtypes", "pandas-gbq"],
@@ -308,6 +310,7 @@ def data_preparation(
     logging.info(
         f"Tabelas criadas no BigQuery: {table_filtered_temp_id} e {table_purchases_temp_id} e {table_returns_temp_id}"
     )
+
 
 @component(
     packages_to_install=[
@@ -723,6 +726,7 @@ def feature_engineering(
                         `{project_id}.{dataset_id}.{table_id}`);"""
         run_bq_query(query, project_name=project_id)
 
+
 @component(
     packages_to_install=["google-cloud-aiplatform", "pyarrow"],
     base_image="python:3.10.6"
@@ -816,6 +820,7 @@ def create_feature_store(
         worker_count=2,
         sync=True,
     )
+
 
 @component(
     packages_to_install=[
@@ -1008,6 +1013,7 @@ def model_train(
     with open(file_name, "wb") as file:
         pickle.dump(model_pipeline, file)
 
+
 @component(
     packages_to_install=[
         "google-cloud-aiplatform",
@@ -1068,6 +1074,7 @@ def batch_prediction(
         project_id=PROJECT_NUMBER,
         if_exists="replace",
     )
+
 
 @pipeline(pipeline_root=PIPELINE_ROOT, name=PIPELINE_NAME.replace("_", "-"))
 def ecommerce_pipeline():
@@ -1148,6 +1155,7 @@ def ecommerce_pipeline():
         table_train_id=TABLE_TRAIN_ID,
         model=model_train_op.outputs["model"],
     )
+
 
 if __name__ == "__main__":
     compiler.Compiler().compile(
